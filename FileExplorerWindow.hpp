@@ -11,8 +11,14 @@ public:
     FileExplorerWindow();
 
 protected:
+    //signals
     void on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column);
+    void on_home_clicked();
+    void on_up_clicked();
+    void on_menu_clicked();
+
     void refresh_file_list();
+    void navigate_to(const std::filesystem::path& path);
 
     class ModelColumns : public Gtk::TreeModel::ColumnRecord {
     public:
@@ -31,7 +37,15 @@ protected:
     };
 
     ModelColumns m_Columns;
+
+    Gtk::Box m_MainLayout;
+    Gtk::Box m_Toolbar;
     Gtk::ScrolledWindow m_ScrolledWindow;
+
+    Gtk::Button m_BtnHome;
+    Gtk::Button m_BtnUp;
+    Gtk::Button m_BtnMenu;
+
     Gtk::TreeView m_TreeView;
     Glib::RefPtr<Gtk::ListStore> m_refTreeModel;
 

@@ -7,13 +7,34 @@
 
 namespace fs = std::filesystem;
 
-FileExplorerWindow::FileExplorerWindow() {
+FileExplorerWindow::FileExplorerWindow() : m_MainLayout(Gtk::Orientation::VERTICAL), m_Toolbar(Gtk::Orientation::HORIZONTAL) {
     set_title("Linxer - The Linux Explorer");
     set_default_size(800, 500);
 
+    set_child(m_MainLayout);
+    m_Toolbar.set_margin(5);
+    m_Toolbar.set_spacing(5);
+
+    m_BtnHome.set_icon_name("go-home");
+    m_BtnHome.set_tooltip_text("Home directory");
+
+    m_BtnUp.set_icon_name("go-up");
+    m_BtnUp.set_tooltip_text("Up Directory");
+
+    m_BtnMenu.set_icon_name("open-menu");
+    m_BtnMenu.set_tooltip_text("Menu");
+
+    m_Toolbar.append(m_BtnHome);
+    m_Toolbar.append(m_BtnUp);
+    m_Toolbar.append(m_BtnMenu);
+
+    m_MainLayout.append(m_Toolbar);
+
     //window layout
     m_ScrolledWindow.set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
-    set_child(m_ScrolledWindow);
+    m_ScrolledWindow.set_expand(true);
+    m_MainLayout.append(m_ScrolledWindow);
+
     m_ScrolledWindow.set_child(m_TreeView);
 
     //window model
@@ -43,9 +64,13 @@ FileExplorerWindow::FileExplorerWindow() {
 
     //signals
     m_TreeView.signal_row_activated().connect(sigc::mem_fun(*this, &FileExplorerWindow::on_row_activated));
+    m_BtnHome.signal_clicked().connect(sigc::mem_fun(*this, &FileExplorerWindow::on_home_clicked));
+    m_BtnUp.signal_clicked().connect(sigc::mem_fun(*this, &FileExplorerWindow::on_up_clicked));
+    m_BtnMenu.signal_clicked().connect(sigc::mem_fun(*this, &FileExplorerWindow::on_menu_clicked));
 
     //initialize
-    m_current_path = fs::current_path();
+    const char* home_dir = std::getenv("HOME");
+    m_current_path = home_dir ? fs::path(home_dir) : fs::current_path();
     refresh_file_list();
 }
 
@@ -59,13 +84,11 @@ void FileExplorerWindow::refresh_file_list(){
         row[m_Columns.m_col_size_text] = "";
         row[m_Columns.m_col_size_real] = 0;
     }
-
     try {
         for(const auto& entry : fs::directory_iterator(m_current_path)) {
             auto row = *(m_refTreeModel->append());
             row[m_Columns.m_col_icon_name] = FileUtils::get_icon_name(entry.path().string());
             row[m_Columns.m_col_name] = entry.path().filename().string();
-
 
             if (entry.is_regular_file()) {
                 uintmax_t size = entry.file_size();
@@ -79,8 +102,34 @@ void FileExplorerWindow::refresh_file_list(){
     } catch (const fs::filesystem_error& e) {
         std::cerr << e.what() << '\n';
     }
-
     set_title(m_current_path.c_str());
+
+    m_BtnUp.set_sensitive(m_current_path != m_current_path.root_path());
+}
+
+void FileExplorerWindow::navigate_to(const fs::path& path) {
+    if (fs::exists(path) && fs::is_directory(path)) {
+        try {
+            fs::directory_iterator check_access(path);
+            m_current_path = path;
+            refresh_file_list();
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << e.what() << '\n';
+        }
+    }
+}
+
+void FileExplorerWindow::on_home_clicked() {
+    const char* home_dir = std::getenv("HOME");
+    if (home_dir) navigate_to(home_dir);
+}
+
+void FileExplorerWindow::on_up_clicked() {
+    if (m_current_path.has_parent_path()) navigate_to(m_current_path.parent_path());
+}
+
+void FileExplorerWindow::on_menu_clicked() {
+    puts("WIP");
 }
 
 void FileExplorerWindow::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*){
@@ -96,7 +145,6 @@ void FileExplorerWindow::on_row_activated(const Gtk::TreeModel::Path& path, Gtk:
                 refresh_file_list();
             }
             return;
-
         }
         fs::path new_path = m_current_path / name;
 
@@ -116,9 +164,5 @@ void FileExplorerWindow::on_row_activated(const Gtk::TreeModel::Path& path, Gtk:
         {
             std::cout << "WIP" << '\n';
         }
-
-
     }
-
-
 }
