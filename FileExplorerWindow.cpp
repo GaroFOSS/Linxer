@@ -4,6 +4,7 @@
 #include "FileExplorerWindow.hpp"
 #include "FileUtils.hpp"
 #include <iostream>
+#include <giomm.h>
 
 namespace fs = std::filesystem;
 
@@ -53,7 +54,7 @@ FileExplorerWindow::FileExplorerWindow() : m_MainLayout(Gtk::Orientation::VERTIC
     pColumn->pack_start(*pCellText, true);
     pColumn->add_attribute(pCellText->property_text(), m_Columns.m_col_name);
 
-    pColumn->set_sort_column(m_Columns.m_col_icon_name);
+    pColumn->set_sort_column(m_Columns.m_col_name);
     m_TreeView.append_column(*pColumn);
 
     int size_col_index = m_TreeView.append_column("Size", m_Columns.m_col_size_text);
@@ -141,8 +142,7 @@ void FileExplorerWindow::on_row_activated(const Gtk::TreeModel::Path& path, Gtk:
         if(name == ".."){
             if (m_current_path.has_parent_path())
             {
-                m_current_path = m_current_path.parent_path();
-                refresh_file_list();
+                navigate_to(m_current_path.parent_path());
             }
             return;
         }
@@ -162,7 +162,15 @@ void FileExplorerWindow::on_row_activated(const Gtk::TreeModel::Path& path, Gtk:
         }
         else
         {
-            std::cout << "WIP" << '\n';
+            try {
+                auto file_obj = Gio::File::create_for_path(new_path.string());
+                std::string uri = file_obj->get_uri();
+                Gio::AppInfo::launch_default_for_uri(uri);
+            } catch (const Glib::Error& e) {
+                std::cerr << "Glib file opening error: " << e.what() << '\n';
+            } catch (const std::exception& e) {
+                std::cerr << "standard file opening error" << e.what() << '\n';
+            }
         }
     }
 }
