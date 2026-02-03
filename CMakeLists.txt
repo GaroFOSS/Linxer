@@ -11,7 +11,8 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-4.0)
 add_executable(Linxer
         main.cpp
         FileExplorerWindow.cpp
-        FileUtils.cpp)
+        FileUtils.cpp
+        FileIconItem.cpp)
 
 target_include_directories(Linxer PRIVATE ${GTKMM_INCLUDE_DIRS})
 target_link_libraries(Linxer PRIVATE ${GTKMM_LIBRARIES})
